@@ -18,8 +18,8 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
   final _quantityController = TextEditingController();
   final _unitController = TextEditingController();
   final _expiryDateController = TextEditingController();
-
   DateTime? _expiryDate;
+
   bool _isLoading = false;
 
   @override
@@ -29,9 +29,10 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
       _nameController.text = widget.ingredient!.name;
       _quantityController.text = widget.ingredient!.quantity.toString();
       _unitController.text = widget.ingredient!.unit;
+
       if (widget.ingredient!.expiryDate != null) {
         _expiryDate = widget.ingredient!.expiryDate;
-        _expiryDateController.text = _formatDate(widget.ingredient!.expiryDate!);
+        _expiryDateController.text = _formatDate(_expiryDate!);
       }
     }
   }
@@ -45,9 +46,8 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
     super.dispose();
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
+  String _formatDate(DateTime date) =>
+      "${date.day}/${date.month}/${date.year}";
 
   Future<void> _selectExpiryDate() async {
     final date = await showDatePicker(
@@ -55,6 +55,20 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
       initialDate: _expiryDate ?? DateTime.now().add(const Duration(days: 7)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFEB35FF), // neon accent
+              onPrimary: Colors.white,
+              surface: Color(0xFF1A1A1C),
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF141414),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (date != null) {
@@ -68,9 +82,7 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
   Future<void> _saveIngredient() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final ingredient = Ingredient(
@@ -88,68 +100,83 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
         await StorageService.addIngredient(ingredient);
       }
 
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
+      if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text("Error: $e")),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // no glow, flat & neon accent
+  InputDecoration _inputDecoration(String label, IconData? icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: icon != null ? Icon(icon, color: Colors.white70) : null,
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.06),
+      labelStyle: const TextStyle(color: Colors.white70),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEB35FF), width: 1.4),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0F0F10),
       appBar: AppBar(
-        title: Text(widget.ingredient != null ? 'Edit Ingredient' : 'Add Ingredient'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          widget.ingredient != null ? "Edit Ingredient" : "Add Ingredient",
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+        ),
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _saveIngredient,
             child: _isLoading
                 ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              width: 18,
+              height: 18,
+              child:
+              CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
             )
-                : const Text('Save'),
+                : const Text(
+              "Save",
+              style: TextStyle(fontSize: 18, color: Color(0xFFEB35FF)),
+            ),
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Name Field
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Ingredient Name',
-                  hintText: 'e.g., Chicken Breast, Tomatoes, Flour',
-                  prefixIcon: Icon(Icons.kitchen),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter ingredient name';
-                  }
-                  return null;
-                },
+                decoration: _inputDecoration("Ingredient Name", Icons.kitchen),
+                style: const TextStyle(color: Colors.white),
+                validator: (value) =>
+                value == null || value.trim().isEmpty ? "Please enter name" : null,
               ),
-              const SizedBox(height: 16),
-
-              // Quantity and Unit Row
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -157,19 +184,11 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
                     child: TextFormField(
                       controller: _quantityController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantity',
-                        hintText: '1.5',
-                        prefixIcon: Icon(Icons.scale),
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: _inputDecoration("Quantity", Icons.scale),
+                      style: const TextStyle(color: Colors.white),
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Required';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Invalid number';
-                        }
+                        if (value == null || value.trim().isEmpty) return "Required";
+                        if (double.tryParse(value) == null) return "Invalid number";
                         return null;
                       },
                     ),
@@ -178,53 +197,46 @@ class _AddIngredientScreenState extends State<AddIngredientScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _unitController,
-                      decoration: const InputDecoration(
-                        labelText: 'Unit',
-                        hintText: 'kg, g, pieces',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Required';
-                        }
-                        return null;
-                      },
+                      decoration: _inputDecoration("Unit", null),
+                      style: const TextStyle(color: Colors.white),
+                      validator: (value) =>
+                      value == null || value.trim().isEmpty ? "Required" : null,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
-              // Expiry Date Field
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _expiryDateController,
-                decoration: const InputDecoration(
-                  labelText: 'Expiry Date (Optional)',
-                  hintText: 'Select expiry date',
-                  prefixIcon: Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(),
-                ),
                 readOnly: true,
                 onTap: _selectExpiryDate,
+                decoration:
+                _inputDecoration("Expiry Date (Optional)", Icons.calendar_today),
+                style: const TextStyle(color: Colors.white),
               ),
-              const SizedBox(height: 24),
-
-              // Save Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveIngredient,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF6B35),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _saveIngredient,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEB35FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
                   ),
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                  widget.ingredient != null ? 'Update Ingredient' : 'Add Ingredient',
-                  style: const TextStyle(fontSize: 16),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                    widget.ingredient != null
+                        ? "Update Ingredient"
+                        : "Add Ingredient",
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],

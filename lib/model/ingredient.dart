@@ -15,6 +15,7 @@ class Ingredient {
     this.expiryDate,
   });
 
+  /// Convert Ingredient object to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -26,19 +27,21 @@ class Ingredient {
     };
   }
 
+  /// Create Ingredient object from JSON
   factory Ingredient.fromJson(Map<String, dynamic> json) {
     return Ingredient(
-      id: json['id'],
-      name: json['name'],
-      quantity: json['quantity'].toDouble(),
-      unit: json['unit'],
-      addedDate: DateTime.parse(json['addedDate']),
+      id: json['id'] as String,
+      name: json['name'] as String,
+      quantity: (json['quantity'] as num).toDouble(),
+      unit: json['unit'] as String,
+      addedDate: DateTime.parse(json['addedDate'] as String),
       expiryDate: json['expiryDate'] != null
-          ? DateTime.parse(json['expiryDate'])
+          ? DateTime.parse(json['expiryDate'] as String)
           : null,
     );
   }
 
+  /// Copy the Ingredient with optional new values
   Ingredient copyWith({
     String? id,
     String? name,
@@ -55,5 +58,10 @@ class Ingredient {
       addedDate: addedDate ?? this.addedDate,
       expiryDate: expiryDate ?? this.expiryDate,
     );
+  }
+
+  @override
+  String toString() {
+    return 'Ingredient(id: $id, name: $name, quantity: $quantity $unit, addedDate: $addedDate, expiryDate: $expiryDate)';
   }
 }

@@ -12,24 +12,55 @@ class PantryPalApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const neonPink = Color(0xFFFF0DF5);
+    const bgDark = Color(0xFF0C0C0C);
+
     return MaterialApp(
       title: 'PantryPal',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.orange,
-        primaryColor: const Color(0xFFFF6B35),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF6B35),
-          brightness: Brightness.light,
-        ),
         useMaterial3: true,
+        scaffoldBackgroundColor: bgDark,
+        primaryColor: neonPink,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: neonPink,
+          brightness: Brightness.dark,
+        ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFF6B35),
-          foregroundColor: Colors.white,
+          backgroundColor: bgDark,
+          foregroundColor: neonPink,
           elevation: 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: neonPink,
+            foregroundColor: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            elevation: 0, // flat button
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: neonPink,
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.06),
+          labelStyle: const TextStyle(color: Colors.white70),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: neonPink, width: 1.3),
+          ),
         ),
       ),
       home: const AuthWrapper(),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -55,18 +86,27 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final prefs = await SharedPreferences.getInstance();
     final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-    setState(() {
-      _isLoggedIn = isLoggedIn;
-      _isLoading = false;
-    });
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (mounted) {
+      setState(() {
+        _isLoggedIn = isLoggedIn;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    const neonPink = Color(0xFFFF0DF5);
+
     if (_isLoading) {
       return const Scaffold(
+        backgroundColor: Color(0xFF0C0C0C),
         body: Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            color: neonPink,
+          ),
         ),
       );
     }

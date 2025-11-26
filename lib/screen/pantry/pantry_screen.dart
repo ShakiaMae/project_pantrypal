@@ -35,16 +35,21 @@ class _PantryScreenState extends State<PantryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Ingredient'),
-        content: Text('Are you sure you want to delete ${ingredient.name}?'),
+        backgroundColor: const Color(0xFF1B1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Ingredient', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Are you sure you want to delete ${ingredient.name}?',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -58,142 +63,153 @@ class _PantryScreenState extends State<PantryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const bgDark = Color(0xFF0C0C0C);
+    const neonPink = Color(0xFFFF0DF5);
+
     return Scaffold(
+      backgroundColor: bgDark,
       appBar: AppBar(
-        title: const Text('My Pantry'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'My Pantry',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _loadIngredients,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: neonPink))
           : _ingredients.isEmpty
           ? _buildEmptyState()
           : _buildIngredientsList(),
+
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.of(context).push(
+          final result = await Navigator.push(
+            context,
             MaterialPageRoute(
               builder: (context) => const AddIngredientScreen(),
             ),
           );
-          if (result == true) {
-            _loadIngredients();
-          }
+          if (result == true) _loadIngredients();
         },
-        backgroundColor: const Color(0xFFFF6B35),
-        child: const Icon(Icons.add, color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: neonPink,
+        elevation: 0, // ← flat style
+        child: const Icon(Icons.add, color: Colors.black, size: 28),
       ),
     );
   }
 
+  // -------------------------------------------------------------------------
+  // EMPTY STATE
+  // -------------------------------------------------------------------------
   Widget _buildEmptyState() {
+    const neonPink = Color(0xFFFF0DF5);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.kitchen_outlined, size: 80, color: Colors.grey[400]),
+            Icon(Icons.kitchen, size: 100, color: Colors.white24),
             const SizedBox(height: 24),
-            Text(
+            const Text(
               'Your pantry is empty',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
+              style: TextStyle(fontSize: 24, color: Colors.white70),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Add some ingredients to get started!',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.grey[500]),
               textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white38, fontSize: 16),
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: () async {
-                final result = await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AddIngredientScreen(),
-                  ),
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddIngredientScreen()),
                 );
-                if (result == true) {
-                  _loadIngredients();
-                }
+                if (result == true) _loadIngredients();
               },
-              icon: const Icon(Icons.add),
-              label: const Text('Add First Ingredient'),
+              icon: const Icon(Icons.add, color: Colors.black),
+              label: const Text('Add First Ingredient', style: TextStyle(color: Colors.black)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6B35),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
+                backgroundColor: neonPink,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-            ),
+            )
           ],
         ),
       ),
     );
   }
 
+  // -------------------------------------------------------------------------
+  // INGREDIENT LIST
+  // -------------------------------------------------------------------------
   Widget _buildIngredientsList() {
+    const neonPink = Color(0xFFFF0DF5);
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _ingredients.length,
       itemBuilder: (context, index) {
         final ingredient = _ingredients[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white.withOpacity(0.06),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: const Color(0xFFFF6B35).withOpacity(0.1),
-              child: Icon(
-                _getIngredientIcon(ingredient.name),
-                color: const Color(0xFFFF6B35),
-              ),
+              backgroundColor: neonPink.withOpacity(0.15),
+              child: Icon(_getIngredientIcon(ingredient.name), color: neonPink),
             ),
             title: Text(
               ingredient.name,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 18),
             ),
             subtitle: Text(
               '${ingredient.quantity} ${ingredient.unit}',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Colors.white.withOpacity(0.7)),
             ),
             trailing: PopupMenuButton(
+              color: const Color(0xFF1B1C1E),
+              icon: const Icon(Icons.more_vert, color: Colors.white70),
               onSelected: (value) {
-                if (value == 'delete') {
-                  _deleteIngredient(ingredient);
-                } else if (value == 'edit') {
-                  _editIngredient(ingredient);
-                }
+                if (value == 'edit') _editIngredient(ingredient);
+                if (value == 'delete') _deleteIngredient(ingredient);
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 8),
-                      Text('Edit'),
-                    ],
-                  ),
+                  child: Row(children: [
+                    Icon(Icons.edit, color: Colors.white70, size: 20),
+                    SizedBox(width: 8),
+                    Text('Edit', style: TextStyle(color: Colors.white)),
+                  ]),
                 ),
                 const PopupMenuItem(
                   value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
+                  child: Row(children: [
+                    Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                    SizedBox(width: 8),
+                    Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                  ]),
                 ),
               ],
             ),
@@ -205,14 +221,13 @@ class _PantryScreenState extends State<PantryScreen> {
   }
 
   void _editIngredient(Ingredient ingredient) async {
-    final result = await Navigator.of(context).push(
+    final result = await Navigator.push(
+      context,
       MaterialPageRoute(
         builder: (context) => AddIngredientScreen(ingredient: ingredient),
       ),
     );
-    if (result == true) {
-      _loadIngredients();
-    }
+    if (result == true) _loadIngredients();
   }
 
   IconData _getIngredientIcon(String name) {

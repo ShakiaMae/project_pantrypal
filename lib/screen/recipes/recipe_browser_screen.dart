@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../model/recipe.dart';
 import '../../services/storage_service.dart';
 import 'recipe_detail_screen.dart';
+import 'add_recipe_screen.dart';
+import '../../widgets/loading_overlay.dart';
 
 class RecipeBrowserScreen extends StatefulWidget {
   const RecipeBrowserScreen({super.key});
@@ -14,7 +16,15 @@ class _RecipeBrowserScreenState extends State<RecipeBrowserScreen> {
   List<Recipe> _recipes = [];
   bool _isLoading = true;
   String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'Italian', 'Asian', 'Dessert', 'Custom'];
+
+  final List<String> _categories = [
+    'All', 'Italian', 'Asian', 'Dessert', 'Custom'
+  ];
+
+  // Neon Colors (NO GLOW)
+  final Color neonPink = const Color(0xFFFF0DF5);
+  final Color bgDark = const Color(0xFF0C0C0C);
+  final Color cardDark = const Color(0xFF161616);
 
   @override
   void initState() {
@@ -23,6 +33,7 @@ class _RecipeBrowserScreenState extends State<RecipeBrowserScreen> {
   }
 
   Future<void> _loadRecipes() async {
+    setState(() => _isLoading = true);
     final recipes = await StorageService.getRecipes();
     if (mounted) {
       setState(() {
@@ -32,281 +43,296 @@ class _RecipeBrowserScreenState extends State<RecipeBrowserScreen> {
     }
   }
 
-  List<Recipe> get _filteredRecipes {
-    if (_selectedCategory == 'All') {
-      return _recipes;
+  Future<void> _navigateToAddRecipe() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddRecipeScreen()),
+    );
+
+    if (result == true) {
+      await _loadRecipes();
     }
-    return _recipes.where((recipe) => recipe.category == _selectedCategory).toList();
+  }
+
+  List<Recipe> get _filteredRecipes {
+    if (_selectedCategory == 'All') return _recipes;
+    return _recipes.where((r) => r.category == _selectedCategory).toList();
+  }
+
+  void _deleteRecipe(Recipe recipe) {
+    setState(() => _recipes.remove(recipe));
+    StorageService.saveRecipes(_recipes);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recipes'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadRecipes,
+    return LoadingOverlay(
+      isLoading: _isLoading,
+      child: Scaffold(
+        backgroundColor: bgDark,
+        appBar: AppBar(
+          backgroundColor: bgDark,
+          elevation: 0,
+          iconTheme: IconThemeData(color: neonPink),
+          title: Text(
+            "Recipes",
+            style: TextStyle(
+              color: neonPink,
+              fontWeight: FontWeight.w600,
+              fontSize: 22,
+            ),
           ),
-        ],
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh, color: neonPink),
+              onPressed: _loadRecipes,
+            )
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: neonPink,
+          child: const Icon(Icons.add, color: Colors.black),
+          onPressed: _navigateToAddRecipe,
+        ),
+        body: _buildContent(),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildContent(),
     );
   }
 
+  // CATEGORY CHIPS
   Widget _buildContent() {
-    if (_recipes.isEmpty) {
-      return _buildEmptyState();
-    }
+    if (_recipes.isEmpty) return _buildEmptyState();
 
     return Column(
       children: [
-        // Category Filter
-        Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        SizedBox(
+          height: 60,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: _categories.length,
-            itemBuilder: (context, index) {
-              final category = _categories[index];
-              final isSelected = category == _selectedCategory;
+            itemBuilder: (context, i) {
+              final c = _categories[i];
+              final selected = c == _selectedCategory;
+
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(category),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedCategory = category;
-                    });
-                  },
-                  selectedColor: const Color(0xFFFF6B35).withOpacity(0.2),
-                  checkmarkColor: const Color(0xFFFF6B35),
+                padding: const EdgeInsets.only(right: 10),
+                child: ChoiceChip(
+                  label: Text(
+                    c,
+                    style: TextStyle(
+                      color:
+                      selected ? Colors.black : neonPink.withOpacity(.8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  selected: selected,
+                  selectedColor: neonPink,
+                  backgroundColor: const Color(0xFF1F1F1F),
+                  onSelected: (_) => setState(() => _selectedCategory = c),
+                  side: BorderSide(
+                    color: selected ? neonPink : Colors.grey[800]!,
+                    width: 1.2,
+                  ),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
-
-        // Recipes List
         Expanded(
           child: _filteredRecipes.isEmpty
               ? _buildNoRecipesForCategory()
               : ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: _filteredRecipes.length,
-            itemBuilder: (context, index) {
-              final recipe = _filteredRecipes[index];
-              return _buildRecipeCard(recipe);
-            },
+            itemBuilder: (c, i) =>
+                _buildRecipeCard(_filteredRecipes[i]),
           ),
-        ),
+        )
       ],
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
+  // CARD UI — CLEAN, NO GLOW
+  Widget _buildRecipeCard(Recipe recipe) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: neonPink.withOpacity(0.15),
+          width: 1.2,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () async {
+          final deleted = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RecipeDetailScreen(
+                recipe: recipe,
+                onDelete: () => _deleteRecipe(recipe),
+              ),
+            ),
+          );
+
+          if (deleted == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${recipe.title} deleted')),
+            );
+          }
+        },
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.restaurant_menu,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No recipes available',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey[600],
+            ClipRRect(
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(18)),
+              child: Image.network(
+                recipe.imageUrl,
+                height: 220,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 220,
+                  color: Colors.black,
+                  child: Icon(Icons.restaurant, size: 50, color: neonPink),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Add your first custom recipe to get started!',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[500],
+
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _titleRow(recipe),
+                  const SizedBox(height: 8),
+                  Text(
+                    recipe.description,
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      _statChip(Icons.access_time, '${recipe.prepTime} min'),
+                      const SizedBox(width: 10),
+                      _statChip(Icons.schedule, '${recipe.cookTime} min'),
+                      const SizedBox(width: 10),
+                      _statChip(Icons.people, '${recipe.servings} servings'),
+                    ],
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
-            ),
+            )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _titleRow(Recipe recipe) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            recipe.title,
+            style: TextStyle(
+              color: neonPink,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (recipe.isCustom)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: neonPink.withOpacity(.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "Custom",
+              style: TextStyle(
+                color: neonPink,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          )
+      ],
+    );
+  }
+
+  // CLEAN STAT CHIP — NO GLOW
+  Widget _statChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF242424),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: neonPink.withOpacity(.15)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: neonPink),
+          const SizedBox(width: 6),
+          Text(text, style: TextStyle(color: neonPink, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  // EMPTY STATES
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.menu_book, size: 80, color: neonPink.withOpacity(.4)),
+          const SizedBox(height: 20),
+          Text(
+            "No recipes yet",
+            style: TextStyle(
+              fontSize: 22,
+              color: neonPink,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text("Tap + to add your first recipe!",
+              style: TextStyle(color: Colors.grey[400])),
+        ],
       ),
     );
   }
 
   Widget _buildNoRecipesForCategory() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.filter_list,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No recipes in $_selectedCategory category',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try selecting a different category or add a new recipe!',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[500],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecipeCard(Recipe recipe) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => RecipeDetailScreen(recipe: recipe),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Recipe Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-              child: Image.network(
-                recipe.imageUrl,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.restaurant,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Recipe Info
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          recipe.title,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      if (recipe.isCustom)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF6B35).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Custom',
-                            style: TextStyle(
-                              color: const Color(0xFFFF6B35),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    recipe.description,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Recipe Stats
-                  Row(
-                    children: [
-                      _buildStatChip(Icons.access_time, '${recipe.prepTime} min prep'),
-                      const SizedBox(width: 8),
-                      _buildStatChip(Icons.schedule, '${recipe.cookTime} min cook'),
-                      const SizedBox(width: 8),
-                      _buildStatChip(Icons.people, '${recipe.servings} servings'),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Ingredients Preview
-                  Text(
-                    'Ingredients: ${recipe.ingredients.length} items',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatChip(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 14, color: Colors.grey[600]),
-          const SizedBox(width: 4),
+          Icon(Icons.filter_alt_off,
+              size: 80, color: neonPink.withOpacity(.4)),
+          const SizedBox(height: 20),
           Text(
-            text,
+            "No recipes in $_selectedCategory",
             style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
+              color: neonPink,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Try another filter or add a recipe.",
+            style: TextStyle(color: Colors.grey[500]),
           ),
         ],
       ),

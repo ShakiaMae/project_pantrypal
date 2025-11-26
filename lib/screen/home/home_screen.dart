@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/storage_service.dart';
 import '../auth/login_screen.dart';
 import '../pantry/pantry_screen.dart';
-import '../recipes/recipe_browser_screen.dart';
-import '../recipes/add_recipe_screen.dart';
+import '../recipes/add_recipe_screen.dart' as add_recipe;
+import '../recipes/recipe_browser_screen.dart' as recipe_browser;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +15,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   String? _userName;
+
+  final Color neonPink = const Color(0xFFFF1EC9);
+  final Color darkBg = const Color(0xFF0A0A0F);
 
   @override
   void initState() {
@@ -34,8 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _logout() async {
     await StorageService.logout();
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
   }
@@ -45,167 +49,143 @@ class _HomeScreenState extends State<HomeScreen> {
     final screens = [
       _buildHomeTab(),
       const PantryScreen(),
-      const RecipeBrowserScreen(),
+      const recipe_browser.RecipeBrowserScreen(),
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
+      backgroundColor: darkBg,
+
+      body: IndexedStack(index: _currentIndex, children: screens),
+
+      // -----------------------------------------------------------------
+      // CLEAN BOTTOM NAVIGATION BAR (no glow)
+      // -----------------------------------------------------------------
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.4),
+          border: Border(
+            top: BorderSide(color: Colors.white.withOpacity(0.08)),
+          ),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.transparent,
+          selectedItemColor: neonPink,
+          unselectedItemColor: Colors.white54,
+          elevation: 0,
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home, color: neonPink),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.kitchen, color: neonPink),
+              label: 'Pantry',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.restaurant_menu, color: neonPink),
+              label: 'Recipes',
+            ),
+          ],
+        ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFFFF6B35),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.kitchen),
-            label: 'Pantry',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant_menu),
-            label: 'Recipes',
-          ),
-        ],
-      ),
+
+      // -----------------------------------------------------------------
+      // CLEAN NEON PINK FAB
+      // -----------------------------------------------------------------
       floatingActionButton: _currentIndex == 2
           ? FloatingActionButton(
+        backgroundColor: neonPink,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18)),
+        child: const Icon(Icons.add, size: 30, color: Colors.white),
         onPressed: () {
-          Navigator.of(context).push(
+          Navigator.push(
+            context,
             MaterialPageRoute(
-              builder: (context) => const AddRecipeScreen(),
-            ),
+                builder: (_) => const add_recipe.AddRecipeScreen()),
           );
         },
-        backgroundColor: const Color(0xFFFF6B35),
-        child: const Icon(Icons.add, color: Colors.white),
       )
           : null,
     );
   }
 
+  // =====================================================================
+  // HOME TAB
+  // =====================================================================
   Widget _buildHomeTab() {
     return Scaffold(
+      backgroundColor: Colors.transparent,
+
       appBar: AppBar(
-        title: Text('Welcome${_userName != null ? ', $_userName' : ''}!'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Welcome${_userName != null ? ', $_userName' : ''}!',
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: _logout,
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Card
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.kitchen,
-                          size: 40,
-                          color: Color(0xFFFF6B35),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome to PantryPal!',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Manage your pantry and discover amazing recipes',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
+            _buildWelcomeCard(),
+            const SizedBox(height: 30),
 
-            // Quick Actions
             Text(
               'Quick Actions',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+              style: TextStyle(
+                color: neonPink,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 16),
+
+            const SizedBox(height: 20),
+
             Row(
               children: [
                 Expanded(
                   child: _buildActionCard(
-                    context,
-                    'Manage Pantry',
-                    Icons.kitchen,
-                    const Color(0xFFFF6B35),
-                        () {
-                      setState(() {
-                        _currentIndex = 1;
-                      });
-                    },
+                    title: 'Manage Pantry',
+                    icon: Icons.kitchen,
+                    onTap: () => setState(() => _currentIndex = 1),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildActionCard(
-                    context,
-                    'Browse Recipes',
-                    Icons.restaurant_menu,
-                    const Color(0xFF4CAF50),
-                        () {
-                      setState(() {
-                        _currentIndex = 2;
-                      });
-                    },
+                    title: 'Browse Recipes',
+                    icon: Icons.restaurant_menu,
+                    onTap: () => setState(() => _currentIndex = 2),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
+
             Row(
               children: [
                 Expanded(
                   child: _buildActionCard(
-                    context,
-                    'Add Recipe',
-                    Icons.add_circle,
-                    const Color(0xFF2196F3),
-                        () {
-                      Navigator.of(context).push(
+                    title: 'Add Recipe',
+                    icon: Icons.add_circle,
+                    onTap: () {
+                      Navigator.push(
+                        context,
                         MaterialPageRoute(
-                          builder: (context) => const AddRecipeScreen(),
+                          builder: (_) => const add_recipe.AddRecipeScreen(),
                         ),
                       );
                     },
@@ -214,15 +194,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildActionCard(
-                    context,
-                    'Grocery List',
-                    Icons.shopping_cart,
-                    const Color(0xFF9C27B0),
-                        () {
-                      // TODO: Implement grocery list feature
+                    title: 'Grocery List',
+                    icon: Icons.shopping_cart,
+                    onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Grocery list feature coming soon!'),
+                          content: Text('Grocery list coming soon!'),
                         ),
                       );
                     },
@@ -236,37 +213,88 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActionCard(
-      BuildContext context,
-      String title,
-      IconData icon,
-      Color color,
-      VoidCallback onTap,
-      ) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                size: 32,
-                color: color,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+  // =====================================================================
+  // CLEAN WELCOME CARD (no glow)
+  // =====================================================================
+  Widget _buildWelcomeCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(color: neonPink.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: neonPink.withOpacity(0.2),
+            ),
+            child: Icon(Icons.kitchen, size: 42, color: neonPink),
           ),
+          const SizedBox(width: 20),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome to PantryPal!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Manage your pantry and discover amazing recipes.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =====================================================================
+  // ACTION CARDS (clean flat neon style)
+  // =====================================================================
+  Widget _buildActionCard({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 22),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white.withOpacity(0.05),
+          border: Border.all(color: neonPink.withOpacity(0.25)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 40, color: neonPink),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 17,
+              ),
+            ),
+          ],
         ),
       ),
     );
